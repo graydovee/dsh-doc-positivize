@@ -82,7 +82,7 @@ pnpm build          # regenerates lib/; commit it with the source change
 pnpm pack --pack-destination ./.pack
 
 # a local spec must be an absolute path
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
 ```
 
 A successful `dsh plugin add` also records the package in `dsh.profile.bundles`, so the row applies on the next boot. Restart the app (or reload the profile) to activate it.
@@ -99,6 +99,8 @@ A successful `dsh plugin add` also records the package in `dsh.profile.bundles`,
 | `maxFiles` | number | `12` | maximum candidate files swept in one run |
 | `maxFileBytes` | number | `96000` | maximum bytes of one file sent to the model |
 | `timeoutMs` | number | `180000` | time budget for one sweep, in milliseconds |
+| `auditEnabled` | boolean | `true` | write the audit trail under the DSH home; `false` disables all audit I/O |
+| `auditRuns` | integer | `20` | newest runs kept; older run directories are deleted |
 
 Override them in the profile patch (the plugin's own `cordis.patch.yml` carries a commented example):
 
@@ -110,6 +112,26 @@ Override them in the profile patch (the plugin's own `cordis.patch.yml` carries 
 ```
 
 `README-zh.md` also shows a scan-clean Chinese guard for repositories whose instructions are Chinese.
+
+## Audit trail
+
+The sweep keeps a plugin-side audit trail of every model request it makes. Records live under `${DSH_HOME:-~/.dsh}/doc-positivize/runs/<runId>/`: `run.jsonl` holds one record per line and `blobs/` stores content-addressed payloads. Files are mode `0600` and the run directory is `0700`.
+
+Each run records:
+
+- the sweep rules text once, so every prompt is reconstructable from the trail;
+- the exact pre-edit bytes of every file sent to the model, with its blob, `sha256`, and byte count;
+- the request envelope — provider, model, `maxTokens`, `reasoningEffort`, and attempt;
+- the model's raw output as a blob with its `sha256`;
+- the parsed edit count and the edits applied or skipped per file;
+- token usage and timing when the provider supplies them;
+- the final status — `done`, `cancelled`, or `failed` — with the error text on failure.
+
+The trail is plugin-side state, not session-log events: external plugins have no public way to write custom session event types today — the known event vocabulary is generated in-repo, `session.append` does not expose the `ignorable` envelope, and `appendPluginRecord` stays inside the in-repo experimental packages. The plugin owns these files and their retention.
+
+Retention keeps the newest `auditRuns` runs (default `20`); a new run deletes older run directories as it starts.
+
+Auditing is on by default. With it enabled, file contents are written to the user's DSH home at mode `0600` under the retention cap. Set `auditEnabled: false` to disable all audit I/O.
 
 ## Settings
 

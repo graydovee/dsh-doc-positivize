@@ -13,6 +13,7 @@ import type { CommandInvocation, CommandRegistry } from './command'
 import { registerRunRoutes } from './http'
 import type { RouteContext } from './http'
 import { RunStore } from './runs'
+import { createAuditStore } from './audit'
 import type { LlmService, SweepLimits } from './sweep'
 
 /** Stable loader identity. */
@@ -31,6 +32,8 @@ export const inject = ['systemPrompt', 'commands', 'llm']
 export { Config }
 export { GUARD_TEXT } from './guard'
 export { buildFilePrompt } from './workflow'
+// Audit helpers: read one run's records or rebuild an exact request for review.
+export { readAuditRecords, reconstructPrompt, resolveAuditRoot } from './audit'
 
 /**
  * Global-layer section name. `<owner>:<topic>` keeps it clear of first-party
@@ -124,6 +127,12 @@ export function apply(ctx: Context, config: ConfigShape): void {
 
   const llm = llmOf(ctx)
   const runs = new RunStore()
+  const audit = createAuditStore({
+    enabled: config.auditEnabled,
+    retainRuns: config.auditRuns,
+    onError: (error) => ctx.logger.warn('doc-positivize audit trail disabled after a write failure', error),
+    onRun: ({ runId, dir }) => ctx.logger.info(`doc-positivize audit: ${runId} -> ${dir}`),
+  })
   let connectionReady = false
   ctx.effect(() => () => runs.dispose(), 'doc-positivize runs')
 
@@ -155,8 +164,8 @@ export function apply(ctx: Context, config: ConfigShape): void {
         maxFileBytes: config.maxFileBytes,
         timeoutMs: config.timeoutMs,
       }
-      if (!connectionReady) return runDocPositivize(llm, invocation, limits)
-      return startDetachedDocPositivize(llm, invocation, limits, runs).result
+      if (!connectionReady) return runDocPositivize(llm, invocation, limits, audit)
+      return startDetachedDocPositivize(llm, invocation, limits, runs, audit).result
     },
   })
 }

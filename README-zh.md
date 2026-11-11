@@ -83,7 +83,7 @@ pnpm build          # 重新生成 lib/；改源码时一并提交
 pnpm pack --pack-destination ./.pack
 
 # 本地 spec 必须是绝对路径
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
 ```
 
 `dsh plugin add` 成功后还会把该包记入 `dsh.profile.bundles`，下次启动即生效。重启应用（或重载 profile）后启用。
@@ -100,6 +100,8 @@ dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10
 | `maxFiles` | number | `12` | 单次扫描最多处理的候选文件数 |
 | `maxFileBytes` | number | `96000` | 单个文件发送给模型的最大字节数 |
 | `timeoutMs` | number | `180000` | 单次扫描的时间预算（毫秒） |
+| `auditEnabled` | boolean | `true` | 是否把审计轨迹写入 DSH home；`false` 关闭全部审计 I/O |
+| `auditRuns` | integer | `20` | 保留最近多少次运行；更早的运行目录会被删除 |
 
 可在 profile 的 patch 里覆盖（插件自带的 `cordis.patch.yml` 有注释示例）：
 
@@ -122,6 +124,26 @@ dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10
       - 只保留最终设计：功能、行为或方案更新时，代码、文案、注释、Commit/MR 与 Prompt 同步只包含最终采纳的方案（例如直接写「标题：番茄炒蛋」；重大破坏性迁移或用户明确要求时记录决策说明）。
       - 正面即标准：编写规则、Prompt、Tool Schema 与注释时，直接声明期望的唯一正面做法与触发条件。
 ```
+
+## Audit trail
+
+扫描在插件侧为它发出的每次模型请求保留一份审计轨迹。记录位于 `${DSH_HOME:-~/.dsh}/doc-positivize/runs/<runId>/`：`run.jsonl` 每行一条记录，`blobs/` 存放按内容寻址的载荷。文件权限为 `0600`，运行目录为 `0700`。
+
+每次运行记录：
+
+- 扫描规则文本各一份，因此每个提示词都能从轨迹中还原；
+- 发送给模型的每个文件在编辑前的原始字节，附 blob、`sha256` 与字节数；
+- 请求信封——provider、model、`maxTokens`、`reasoningEffort` 与 attempt；
+- 模型原始输出（blob 加 `sha256`）；
+- 解析出的编辑数，以及每个文件已应用或跳过的编辑；
+- provider 提供时的 usage 与耗时；
+- 最终状态 `done`/`cancelled`/`failed`，失败时附错误文本。
+
+这条轨迹是插件侧状态，不是会话事件日志：外部插件目前没有写入自定义会话事件类型的公开方式——已知事件词表在仓库内生成，`session.append` 不暴露 `ignorable` 信封，`appendPluginRecord` 仅限仓库内的实验性包。这些文件及其保留策略由插件自己管理。
+
+保留策略保留最新的 `auditRuns` 次运行（默认 `20`）；新运行开始时删除更早的运行目录。
+
+审计默认开启。开启时，文件内容会写入用户的 DSH home（权限 `0600`，受保留上限约束）。设置 `auditEnabled: false` 可关闭全部审计 I/O。
 
 ## Settings
 

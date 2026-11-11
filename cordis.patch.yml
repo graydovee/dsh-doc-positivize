@@ -34,3 +34,8 @@
       #   maxFiles: 12
       #   maxFileBytes: 96000
       #   timeoutMs: 180000
+      #   # Plugin-side audit trail under ${DSH_HOME:-~/.dsh}/doc-positivize/runs/.
+      #   # true writes it (mode 0600); false disables all audit I/O.
+      #   auditEnabled: true
+      #   # Newest runs kept; older run directories are deleted on the next run.
+      #   auditRuns: 20

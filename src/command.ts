@@ -12,6 +12,7 @@
  */
 import { runSweep } from './sweep'
 import type { LlmService, ModelRoute, SweepLimits, SweepResult } from './sweep'
+import type { AuditStore } from './audit'
 import type { RunStore } from './runs'
 
 /** Human-facing command name. */
@@ -128,11 +129,13 @@ export async function runDocPositivize(
   llm: LlmService,
   invocation: CommandInvocation,
   limits: SweepLimits,
+  audit?: AuditStore,
 ): Promise<CommandResult> {
   const parsed = parseCommandInput(invocation.rawInput)
   if (!parsed.ok) return { kind: 'error', text: parsed.usage }
 
   const cwd = invocation.agent.session.header.cwd ?? process.cwd()
+  const runId = `fg-positivize-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
   try {
     const route = resolveRoute(invocation.agent)
     const result = await runSweep({
@@ -143,6 +146,9 @@ export async function runDocPositivize(
       route,
       sessionId: invocation.agent.session.id,
       limits,
+      runId,
+      detached: false,
+      ...(audit === undefined ? {} : { audit: audit.sink }),
     })
     return { kind: 'success', text: renderReport(result) }
   } catch (error) {
@@ -178,6 +184,7 @@ export function startDetachedDocPositivize(
   invocation: CommandInvocation,
   limits: SweepLimits,
   runs: RunStore,
+  audit?: AuditStore,
 ): DetachedRun {
   const parsed = parseCommandInput(invocation.rawInput)
   if (!parsed.ok) {
@@ -212,7 +219,7 @@ export function startDetachedDocPositivize(
   const cwd = session.header.cwd ?? process.cwd()
   const runId = `cmd-positivize-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
   const controller = new AbortController()
-  runs.begin({ runId, sessionId: session.id, cwd, target: parsed.target, controller })
+  runs.begin({ runId, sessionId: session.id, cwd, target: parsed.target, controller, auditPath: audit?.runDir(runId) ?? undefined })
   try {
     append('command/run', {
       commandId: runId,
@@ -239,6 +246,9 @@ export function startDetachedDocPositivize(
         route,
         sessionId: session.id,
         limits,
+        runId,
+        detached: true,
+        ...(audit === undefined ? {} : { audit: audit.sink }),
         onScan: (info) => runs.scan(runId, info),
         onProgress: (progress) => runs.progress(runId, progress),
       })

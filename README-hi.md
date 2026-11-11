@@ -78,7 +78,7 @@ pnpm build          # lib/ फिर बनता है; source बदलाव
 pnpm pack --pack-destination ./.pack
 
 # स्थानीय spec का पूर्ण पथ होना चाहिए
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
 ```
 
 सफल `dsh plugin add` package को `dsh.profile.bundles` में भी दर्ज करता है; सक्रिय करने के लिए app restart करें (या profile reload करें)।
@@ -95,6 +95,28 @@ dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10
 | `maxFiles` | number | `12` | एक sweep में अधिकतम candidate फ़ाइलें |
 | `maxFileBytes` | number | `96000` | model को भेजी जाने वाली एक फ़ाइल के अधिकतम bytes |
 | `timeoutMs` | number | `180000` | एक sweep का समय बजट, milliseconds में |
+| `auditEnabled` | boolean | `true` | audit trail को DSH home में लिखता है; `false` सारा audit I/O बंद करता है |
+| `auditRuns` | integer | `20` | कितनी नवीनतम runs रखी जाती हैं; पुरानी run directories हटा दी जाती हैं |
+
+## Audit trail
+
+Sweep अपने हर model request की plugin-side audit trail रखता है। Records `${DSH_HOME:-~/.dsh}/doc-positivize/runs/<runId>/` में रहते हैं: `run.jsonl` में प्रति पंक्ति एक record और `blobs/` में content-addressed payloads। फ़ाइलों का mode `0600` और run directory का `0700` है।
+
+हर run दर्ज करता है:
+
+- sweep rules का पाठ एक बार, ताकि हर prompt trail से फिर बनाया जा सके।
+- model को भेजी गई हर फ़ाइल के edit से पहले के exact bytes, उसके blob, `sha256` और byte count के साथ।
+- request envelope — provider, model, `maxTokens`, `reasoningEffort` और attempt।
+- model का raw output, blob और `sha256` के साथ।
+- parse किए गए edit counts और प्रति फ़ाइल applied या skipped edits।
+- provider देने पर token usage और timing।
+- अंतिम status — `done`, `cancelled` या `failed` — विफलता पर error text के साथ।
+
+यह trail plugin-side state है, session-log events नहीं: external plugins के पास आज custom session event types लिखने का public तरीका नहीं है — ज्ञात event vocabulary repository के अंदर generate होती है, `session.append` `ignorable` envelope नहीं देता, और `appendPluginRecord` repository के experimental packages तक सीमित है। ये फ़ाइलें और उनकी retention plugin की अपनी हैं।
+
+Retention सबसे नई `auditRuns` runs रखती है (default `20`); नया run शुरू होते ही पुरानी run directories हटा देता है।
+
+Auditing default रूप से चालू है। चालू होने पर फ़ाइलों का content उपयोगकर्ता के DSH home में mode `0600` और retention सीमा के अंदर लिखा जाता है। सारा audit I/O बंद करने के लिए `auditEnabled: false` सेट करें।
 
 ## Settings
 

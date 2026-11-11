@@ -78,7 +78,7 @@ pnpm build          # regenera lib/; commitéalo junto al cambio de fuentes
 pnpm pack --pack-destination ./.pack
 
 # una especificación local debe ser una ruta absoluta
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
 ```
 
 Un `dsh plugin add` correcto también registra el paquete en `dsh.profile.bundles`; reinicia la aplicación (o recarga el perfil) para activarlo.
@@ -95,6 +95,28 @@ Un `dsh plugin add` correcto también registra el paquete en `dsh.profile.bundle
 | `maxFiles` | number | `12` | máximo de archivos candidatos por barrido |
 | `maxFileBytes` | number | `96000` | máximo de bytes de un archivo enviado al modelo |
 | `timeoutMs` | number | `180000` | presupuesto de tiempo por barrido, en milisegundos |
+| `auditEnabled` | boolean | `true` | escribe la traza de auditoría en el DSH home; `false` desactiva toda la E/S de auditoría |
+| `auditRuns` | integer | `20` | ejecuciones más recientes que se conservan; los directorios anteriores se eliminan |
+
+## Audit trail
+
+El barrido conserva en el plugin una traza de auditoría de cada petición al modelo que hace. Los registros viven en `${DSH_HOME:-~/.dsh}/doc-positivize/runs/<runId>/`: `run.jsonl` guarda un registro por línea y `blobs/` almacena las cargas direccionadas por contenido. Los archivos tienen modo `0600` y el directorio de la ejecución `0700`.
+
+Cada ejecución registra:
+
+- el texto de las reglas del barrido una vez, para que cada prompt se pueda reconstruir desde la traza;
+- los bytes exactos previos a la edición de cada archivo enviado al modelo, con su blob, `sha256` y número de bytes;
+- el sobre de la petición: proveedor, modelo, `maxTokens`, `reasoningEffort` e intento;
+- la salida en bruto del modelo como blob con su `sha256`;
+- el recuento de ediciones analizadas y las ediciones aplicadas u omitidas por archivo;
+- el uso de tokens y los tiempos cuando el proveedor los entrega;
+- el estado final —`done`, `cancelled` o `failed`— con el texto del error si falla.
+
+La traza es estado del plugin, no eventos del registro de sesión: los plugins externos no tienen hoy una vía pública para escribir tipos de evento de sesión propios, porque el vocabulario de eventos conocidos se genera dentro del repositorio, `session.append` no expone el sobre `ignorable` y `appendPluginRecord` queda dentro de los paquetes experimentales del repositorio. El plugin es dueño de estos archivos y de su retención.
+
+La retención conserva las `auditRuns` ejecuciones más recientes (por defecto `20`); una nueva ejecución elimina los directorios de ejecución anteriores al empezar.
+
+La auditoría está activa por defecto. Con ella activa, el contenido de los archivos se escribe en el DSH home del usuario con modo `0600` y bajo el límite de retención. Configura `auditEnabled: false` para desactivar toda la E/S de auditoría.
 
 ## Settings
 

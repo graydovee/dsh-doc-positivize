@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
@@ -18,6 +18,7 @@ import type { LlmChunk, LlmService, LlmStreamOptions, SweepLimits } from '../src
 import { DEFAULT_IGNORED_PATHS } from '../src/config'
 import { RunStore } from '../src/runs'
 import { buildFilePrompt, lineHasMarker } from '../src/workflow'
+import { createAuditStore, readAuditRecords, reconstructPrompt } from '../src/audit'
 
 const LIMITS: SweepLimits = {
   ignoredPaths: DEFAULT_IGNORED_PATHS,
@@ -464,5 +465,98 @@ describe('renderSummary', () => {
     expect(text).toContain('(terminated)')
     expect(text).toContain('Terminated:')
     expect(text).toContain('Skipped 1 file(s).')
+  })
+})
+
+/** A private audit root under the OS temp directory. */
+function auditRoot(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'doc-positivize-audit-'))
+  tempDirs.push(dir)
+  return dir
+}
+
+describe('audit trail wiring', () => {
+  it('records every detached request and exposes the run directory', async () => {
+    const cwd = workspace({ 'README.md': 'Do not use it.\n' })
+    const { llm } = fakeLlm(editPlan([{ oldText: 'Do not use it.', newText: 'Use the shared client.' }]))
+    const { invocation: call, appended } = detachedInvocation(cwd, 'README.md')
+    const runs = new RunStore()
+    const store = createAuditStore({ enabled: true, retainRuns: 5, root: auditRoot() })
+
+    const run = startDetachedDocPositivize(llm, call, LIMITS, runs, store)
+    const runId = String(appended.find((event) => event.type === 'command/run')?.data.commandId)
+    await run.settled
+
+    const dir = store.runDir(runId)
+    expect(dir).not.toBeNull()
+    expect(runs.view(runId)?.auditPath).toBe(dir)
+    const records = readAuditRecords(dir as string)
+    expect(records.map((record) => record.type)).toEqual([
+      'run-start',
+      'scan',
+      'file',
+      'request',
+      'request-result',
+      'apply',
+      'run-end',
+    ])
+    const request = records.find((record) => record.type === 'request')
+    expect(request?.provider).toBe('fake')
+    expect(request?.path).toBe('README.md')
+    expect(request?.attempt).toBe(1)
+    expect(reconstructPrompt(dir as string, 1)).toBe(buildFilePrompt('README.md', 'Do not use it.\n'))
+    expect(records.find((record) => record.type === 'request-result')?.outcome).toBe('ok')
+    expect(records.find((record) => record.type === 'run-end')?.status).toBe('done')
+  })
+
+  it('records a cancelled request and a cancelled run', async () => {
+    const cwd = workspace({ 'README.md': 'Do not use it.\n' })
+    const { llm } = blockingLlm()
+    const { invocation: call, appended } = detachedInvocation(cwd, 'README.md')
+    const runs = new RunStore()
+    const store = createAuditStore({ enabled: true, retainRuns: 5, root: auditRoot() })
+
+    const run = startDetachedDocPositivize(llm, call, LIMITS, runs, store)
+    await waitFor(() => appended.some((event) => event.type === 'command/run'))
+    const runId = String(appended.find((event) => event.type === 'command/run')?.data.commandId)
+    runs.cancel(runId)
+    await run.settled
+
+    const records = readAuditRecords(store.runDir(runId) as string)
+    expect(records.find((record) => record.type === 'request-result')?.outcome).toBe('cancelled')
+    expect(records.find((record) => record.type === 'run-end')?.status).toBe('cancelled')
+  })
+
+  it('records a run that fails before any request', async () => {
+    const cwd = workspace({ 'README.md': 'nothing to change\n' })
+    const { llm } = fakeLlm(editPlan([]))
+    const { invocation: call, appended } = detachedInvocation(cwd, 'missing*')
+    const runs = new RunStore()
+    const store = createAuditStore({ enabled: true, retainRuns: 5, root: auditRoot() })
+
+    const run = startDetachedDocPositivize(llm, call, LIMITS, runs, store)
+    const runId = String(appended.find((event) => event.type === 'command/run')?.data.commandId)
+    await run.settled
+
+    const records = readAuditRecords(store.runDir(runId) as string)
+    expect(records.map((record) => record.type)).toEqual(['run-start', 'run-end'])
+    const end = records.find((record) => record.type === 'run-end')
+    expect(end?.status).toBe('failed')
+    expect(String(end?.error)).toContain('no files match')
+  })
+
+  it('records the foreground path under its own run id', async () => {
+    const cwd = workspace({ 'README.md': 'Do not use it.\n' })
+    const { llm } = fakeLlm(editPlan([{ oldText: 'Do not use it.', newText: 'Use the shared client.' }]))
+    const root = auditRoot()
+    const store = createAuditStore({ enabled: true, retainRuns: 5, root })
+
+    const result = await runDocPositivize(llm, invocation(cwd, 'README.md'), LIMITS, store)
+    expect(result.kind).toBe('success')
+    const runIds = readdirSync(join(root, 'runs'))
+    expect(runIds).toHaveLength(1)
+    const records = readAuditRecords(join(root, 'runs', runIds[0]))
+    expect(records.find((record) => record.type === 'run-start')?.detached).toBe(false)
+    expect(records.find((record) => record.type === 'run-end')?.status).toBe('done')
   })
 })

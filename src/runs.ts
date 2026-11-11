@@ -46,6 +46,8 @@ export interface RunView {
   readonly notes: readonly string[]
   readonly progress: SweepProgress | null
   readonly error: string | null
+  /** Absolute audit directory for this run, or null when auditing is off. */
+  readonly auditPath: string | null
 }
 
 /** Stable failure codes the HTTP layer returns to the card. */
@@ -95,6 +97,7 @@ interface RunRecord {
   readonly sessionId: string
   readonly cwd: string
   readonly target: string | null
+  readonly auditPath: string | null
   readonly controller: AbortController
   readonly startedAt: number
   status: RunStatus
@@ -159,6 +162,7 @@ export class RunStore {
     readonly sessionId: string
     readonly cwd: string
     readonly target?: string
+    readonly auditPath?: string | null
     readonly controller: AbortController
   }): void {
     this.runs.set(input.runId, {
@@ -166,6 +170,7 @@ export class RunStore {
       sessionId: input.sessionId,
       cwd: input.cwd,
       target: input.target === undefined || input.target.trim() === '' ? null : input.target,
+      auditPath: input.auditPath ?? null,
       controller: input.controller,
       startedAt: Date.now(),
       status: 'running',
@@ -408,6 +413,7 @@ export class RunStore {
       notes: record.notes,
       progress: record.status === 'running' ? record.progress : null,
       error: record.error,
+      auditPath: record.auditPath,
     }
   }
 

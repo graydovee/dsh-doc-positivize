@@ -78,7 +78,7 @@ pnpm build          # regenera lib/; faça commit junto com a mudança
 pnpm pack --pack-destination ./.pack
 
 # uma especificação local precisa ser um caminho absoluto
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
 ```
 
 Um `dsh plugin add` bem-sucedido também registra o pacote em `dsh.profile.bundles`; reinicie o aplicativo (ou recarregue o perfil) para ativá-lo.
@@ -95,6 +95,28 @@ Um `dsh plugin add` bem-sucedido também registra o pacote em `dsh.profile.bundl
 | `maxFiles` | number | `12` | máximo de arquivos candidatos por varredura |
 | `maxFileBytes` | number | `96000` | máximo de bytes de um arquivo enviado ao modelo |
 | `timeoutMs` | number | `180000` | orçamento de tempo por varredura, em milissegundos |
+| `auditEnabled` | boolean | `true` | grava a trilha de auditoria no DSH home; `false` desativa toda a E/S de auditoria |
+| `auditRuns` | integer | `20` | execuções mais recentes mantidas; os diretórios anteriores são excluídos |
+
+## Audit trail
+
+A varredura mantém no plugin uma trilha de auditoria de cada requisição ao modelo que faz. Os registros ficam em `${DSH_HOME:-~/.dsh}/doc-positivize/runs/<runId>/`: `run.jsonl` guarda um registro por linha e `blobs/` armazena as cargas endereçadas por conteúdo. Os arquivos têm modo `0600` e o diretório da execução `0700`.
+
+Cada execução registra:
+
+- o texto das regras da varredura uma vez, para que cada prompt possa ser reconstruído a partir da trilha;
+- os bytes exatos anteriores à edição de cada arquivo enviado ao modelo, com seu blob, `sha256` e contagem de bytes;
+- o envelope da requisição: provedor, modelo, `maxTokens`, `reasoningEffort` e tentativa;
+- a saída bruta do modelo como blob com seu `sha256`;
+- a contagem de edições analisadas e as edições aplicadas ou ignoradas por arquivo;
+- o uso de tokens e os tempos quando o provedor os fornece;
+- o status final — `done`, `cancelled` ou `failed` — com o texto do erro em caso de falha.
+
+A trilha é estado do plugin, não eventos do log de sessão: plugins externos não têm hoje uma via pública para escrever tipos de evento de sessão próprios, porque o vocabulário de eventos conhecidos é gerado dentro do repositório, `session.append` não expõe o envelope `ignorable` e `appendPluginRecord` fica dentro dos pacotes experimentais do repositório. O plugin é dono desses arquivos e da sua retenção.
+
+A retenção mantém as `auditRuns` execuções mais recentes (padrão `20`); uma nova execução exclui os diretórios de execução anteriores ao começar.
+
+A auditoria fica ativa por padrão. Com ela ativa, o conteúdo dos arquivos é gravado no DSH home do usuário com modo `0600` e sob o limite de retenção. Defina `auditEnabled: false` para desativar toda a E/S de auditoria.
 
 ## Settings
 

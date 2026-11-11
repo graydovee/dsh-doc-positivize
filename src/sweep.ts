@@ -14,11 +14,14 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from '
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { buildFilePrompt, lineHasMarker } from './workflow'
 import { unifiedDiff } from './diff'
+import type { AuditSink } from './audit'
 
 /** One streamed chunk from the LLM service. */
 export interface LlmChunk {
   readonly type: string
   readonly text?: string
+  /** Provider usage, on the `usage` chunk that precedes `finish`. */
+  readonly usage?: unknown
   readonly reason?: {
     readonly kind: string
     readonly failure?: { readonly message?: string }
@@ -320,6 +323,30 @@ function parseEdits(text: string): Edit[] | undefined {
 }
 
 /** Ask the model for one file's edit plan. */
+/** One attempt's opening envelope, reported before dispatch. */
+interface AttemptStart {
+  readonly attempt: number
+  readonly maxTokens: number
+  readonly reasoningEffort?: string
+}
+
+/** One attempt's terminal state, reported after the stream settles. */
+interface AttemptEnd {
+  readonly attempt: number
+  readonly outcome: 'ok' | 'error' | 'cancelled'
+  readonly durationMs: number
+  readonly rawText: string
+  readonly finish?: unknown
+  readonly usage?: unknown
+  readonly error?: string
+}
+
+/** Attempt observers used by the audit trail. */
+interface AttemptObservers {
+  readonly onStart?: (start: AttemptStart) => void
+  readonly onEnd?: (end: AttemptEnd) => void
+}
+
 async function planEdits(
   llm: LlmService,
   route: ModelRoute,
@@ -327,6 +354,7 @@ async function planEdits(
   signal: AbortSignal,
   relativePath: string,
   content: string,
+  observers?: AttemptObservers,
 ): Promise<Edit[]> {
   const messages = [
     {
@@ -346,38 +374,63 @@ async function planEdits(
     efforts.length === 0 ? undefined : efforts.includes('off') ? 'off' : efforts.includes('low') ? 'low' : efforts[0]
   const maxTokens = Math.max(8192, Math.min(16384, info?.defaultMaxTokens ?? 8192))
 
-  const run = async (effort: string | undefined): Promise<Edit[]> => {
-    const stream = llm.stream({
-      provider: route.provider,
-      model: route.model,
-      messages,
-      maxTokens,
-      ...(effort === undefined ? {} : { reasoningEffort: effort }),
-      sessionId,
-      purpose: 'doc-positivize',
-      signal,
-    })
-
+  const run = async (effort: string | undefined, attempt: number): Promise<Edit[]> => {
+    observers?.onStart?.({ attempt, maxTokens, ...(effort === undefined ? {} : { reasoningEffort: effort }) })
+    const startedAt = Date.now()
     let text = ''
     let finish: LlmChunk['reason']
-    for await (const chunk of stream) {
-      if (chunk.type === 'text-delta' && typeof chunk.text === 'string') text += chunk.text
-      else if (chunk.type === 'finish') finish = chunk.reason
+    let usage: unknown
+    try {
+      const stream = llm.stream({
+        provider: route.provider,
+        model: route.model,
+        messages,
+        maxTokens,
+        ...(effort === undefined ? {} : { reasoningEffort: effort }),
+        sessionId,
+        purpose: 'doc-positivize',
+        signal,
+      })
+
+      for await (const chunk of stream) {
+        if (chunk.type === 'text-delta' && typeof chunk.text === 'string') text += chunk.text
+        else if (chunk.type === 'usage') usage = chunk.usage
+        else if (chunk.type === 'finish') finish = chunk.reason
+      }
+      if (finish !== undefined && finish.kind !== 'stop') {
+        const detail = finish.failure?.message === undefined ? '' : `: ${finish.failure.message}`
+        throw new Error(`model finished with ${finish.kind}${detail}`)
+      }
+      const edits = parseEdits(text)
+      if (edits === undefined) throw new Error('model did not return the edit-plan JSON')
+      observers?.onEnd?.({
+        attempt,
+        outcome: 'ok',
+        durationMs: Date.now() - startedAt,
+        rawText: text,
+        ...(finish === undefined ? {} : { finish }),
+        ...(usage === undefined ? {} : { usage }),
+      })
+      return edits
+    } catch (error) {
+      observers?.onEnd?.({
+        attempt,
+        outcome: signal.aborted ? 'cancelled' : 'error',
+        durationMs: Date.now() - startedAt,
+        rawText: text,
+        ...(finish === undefined ? {} : { finish }),
+        ...(usage === undefined ? {} : { usage }),
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
     }
-    if (finish !== undefined && finish.kind !== 'stop') {
-      const detail = finish.failure?.message === undefined ? '' : `: ${finish.failure.message}`
-      throw new Error(`model finished with ${finish.kind}${detail}`)
-    }
-    const edits = parseEdits(text)
-    if (edits === undefined) throw new Error('model did not return the edit-plan JSON')
-    return edits
   }
 
   try {
-    return await run(reasoningEffort)
+    return await run(reasoningEffort, 1)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (reasoningEffort !== undefined && /reasoning effort/i.test(message)) return run(undefined)
+    if (reasoningEffort !== undefined && /reasoning effort/i.test(message)) return run(undefined, 2)
     throw error
   }
 }
@@ -471,7 +524,8 @@ function errorText(error: unknown): string {
  * @param input - LLM route, workspace, scope, signal, and limits.
  * @returns the changed files, skipped edits, remaining hits, and notes.
  */
-export async function runSweep(input: {
+/** One sweep invocation. */
+export interface SweepInput {
   readonly llm: LlmService
   readonly cwd: string
   readonly target?: string
@@ -479,11 +533,76 @@ export async function runSweep(input: {
   readonly route: ModelRoute
   readonly sessionId: string
   readonly limits: SweepLimits
+  /** Stable id for the audit trail; the detached path reuses its command id. */
+  readonly runId?: string
+  /** True when the caller runs the sweep in the background. */
+  readonly detached?: boolean
+  /** Audit sink; absent leaves the request trail unrecorded. */
+  readonly audit?: AuditSink
   /** Called once after the scope is scanned, before the first model request. */
   readonly onScan?: (info: { readonly scanned: number; readonly candidates: number }) => void
   /** Called before each candidate is sent to the model. */
   readonly onProgress?: (progress: SweepProgress) => void
-}): Promise<SweepResult> {
+}
+
+/**
+ * Run one sweep and bracket it with audit records.
+ *
+ * @param input - host services, scope, limits, and the optional audit sink.
+ * @returns the complete or partial sweep result.
+ */
+export async function runSweep(input: SweepInput): Promise<SweepResult> {
+  const sink = input.audit
+  const runId = input.runId
+  if (sink !== undefined && runId !== undefined) {
+    sink.beginRun({
+      runId,
+      sessionId: input.sessionId,
+      cwd: input.cwd,
+      scope: input.target ?? 'the current workspace',
+      detached: input.detached === true,
+      provider: input.route.provider,
+      model: input.route.model,
+      limits: {
+        maxFiles: input.limits.maxFiles,
+        maxFileBytes: input.limits.maxFileBytes,
+        timeoutMs: input.limits.timeoutMs,
+      },
+    })
+  }
+  try {
+    const result = await sweepDocPositivize(input, sink, runId)
+    if (sink !== undefined && runId !== undefined) {
+      sink.endRun(runId, {
+        status: result.cancelled ? 'cancelled' : 'done',
+        changedFiles: result.changedFiles,
+        edits: result.changes.length,
+        skipped: result.skipped.length,
+        notes: result.notes,
+      })
+    }
+    return result
+  } catch (error) {
+    if (sink !== undefined && runId !== undefined) {
+      sink.endRun(runId, {
+        status: 'failed',
+        changedFiles: 0,
+        edits: 0,
+        skipped: 0,
+        notes: [],
+        error: errorText(error),
+      })
+    }
+    throw error
+  }
+}
+
+/** The sweep proper; audit bracketing lives in {@link runSweep}. */
+async function sweepDocPositivize(
+  input: SweepInput,
+  sink: AuditSink | undefined,
+  runId: string | undefined,
+): Promise<SweepResult> {
   const started = Date.now()
   const scope = input.target ?? 'the current workspace'
   if (input.signal.aborted) {
@@ -511,6 +630,7 @@ export async function runSweep(input: {
   const { candidates, scanned, skippedLarge } = scan(files, input.cwd)
   const notes: string[] = []
   if (skippedLarge > 0) notes.push(`${skippedLarge} file(s) larger than ${MAX_SCAN_BYTES} bytes were skipped`)
+  if (sink !== undefined && runId !== undefined) sink.scan(runId, { scanned, candidates: candidates.length })
   try {
     input.onScan?.({ scanned, candidates: candidates.length })
   } catch {
@@ -558,12 +678,45 @@ export async function runSweep(input: {
     }
     if (Buffer.byteLength(candidate.content, 'utf8') > input.limits.maxFileBytes) {
       skipped.push({ path: candidate.rel, reason: 'file exceeds maxFileBytes' })
+      if (sink !== undefined && runId !== undefined) {
+        sink.skip(runId, { seq: index + 1, path: candidate.rel, reason: 'file exceeds maxFileBytes' })
+      }
       continue
+    }
+
+    const seq = index + 1
+    if (sink !== undefined && runId !== undefined) {
+      sink.file(runId, { seq, path: candidate.rel, content: candidate.content })
     }
 
     let edits: Edit[]
     try {
-      edits = await planEdits(input.llm, input.route, input.sessionId, input.signal, candidate.rel, candidate.content)
+      edits = await planEdits(input.llm, input.route, input.sessionId, input.signal, candidate.rel, candidate.content, {
+        onStart: (start) => {
+          if (sink === undefined || runId === undefined) return
+          sink.request(runId, {
+            seq,
+            attempt: start.attempt,
+            provider: input.route.provider,
+            model: input.route.model,
+            maxTokens: start.maxTokens,
+            reasoningEffort: start.reasoningEffort ?? null,
+          })
+        },
+        onEnd: (end) => {
+          if (sink === undefined || runId === undefined) return
+          sink.requestResult(runId, {
+            seq,
+            attempt: end.attempt,
+            outcome: end.outcome,
+            durationMs: end.durationMs,
+            rawText: end.rawText,
+            ...(end.finish === undefined ? {} : { finish: end.finish }),
+            ...(end.usage === undefined ? {} : { usage: end.usage }),
+            ...(end.error === undefined ? {} : { error: end.error }),
+          })
+        },
+      })
     } catch (error) {
       if (input.signal.aborted) {
         cancelled = true
@@ -603,12 +756,29 @@ export async function runSweep(input: {
         }
       } catch (error) {
         skipped.push({ path: candidate.rel, reason: `write failed: ${errorText(error)}` })
+        if (sink !== undefined && runId !== undefined) {
+          sink.skip(runId, { seq, path: candidate.rel, reason: `write failed: ${errorText(error)}` })
+        }
         continue
       }
     }
     changes.push(...applied.changes)
     skipped.push(...applied.skipped)
     remaining.push(...remainingHits(candidate.rel, applied.content))
+    if (sink !== undefined && runId !== undefined) {
+      sink.apply(runId, {
+        seq,
+        path: candidate.rel,
+        wrote: applied.changes.length > 0,
+        applied: applied.changes.map((change) => ({
+          line: change.line,
+          action: change.action,
+          original: change.original,
+          change: change.change,
+        })),
+        skipped: applied.skipped.map((item) => ({ reason: item.reason })),
+      })
+    }
   }
 
   if (cancelled) {

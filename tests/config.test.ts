@@ -17,6 +17,8 @@ describe('Config', () => {
     expect(config.maxFiles).toBe(12)
     expect(config.maxFileBytes).toBe(96000)
     expect(config.timeoutMs).toBe(180000)
+    expect(config.auditEnabled).toBe(true)
+    expect(config.auditRuns).toBe(20)
     expect(config.ignoredPaths.get()).toContain('node_modules')
   })
 
@@ -29,6 +31,17 @@ describe('Config', () => {
 
   it('rejects a fractional budget', () => {
     expect(() => Config({ maxFiles: 1.5 })).toThrow()
+  })
+
+  it('rejects an audit retention below one run', () => {
+    expect(() => Config({ auditRuns: 0 })).toThrow()
+    expect(() => Config({ auditRuns: 1.5 })).toThrow()
+  })
+
+  it('accepts audit overrides', () => {
+    const config = Config({ auditEnabled: false, auditRuns: 1 })
+    expect(config.auditEnabled).toBe(false)
+    expect(config.auditRuns).toBe(1)
   })
 
   it('keeps a valid override', () => {

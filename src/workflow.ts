@@ -55,16 +55,31 @@ Return only this JSON object: {"edits":[{"oldText":"exact substring","newText":"
 - Return {"edits":[]} when the file needs no change.`
 
 /**
- * Build the prompt for one file's rewrite plan.
+ * Build one prompt from an explicit rules text.
+ *
+ * The audit rebuilds historical requests with the rules recorded for that run,
+ * so this is the single place the envelope format lives.
+ *
+ * @param rules - the sweep rules, current or recorded.
+ * @param relativePath - file path relative to the scanned scope root.
+ * @param content - complete file text.
+ * @returns rules plus the path and content envelope.
+ */
+export function buildPrompt(rules: string, relativePath: string, content: string): string {
+  return `${rules}
+
+File: ${relativePath}
+
+${content}`
+}
+
+/**
+ * Build the prompt for one file's rewrite plan with the current rules.
  *
  * @param relativePath - file path relative to the scanned scope root.
  * @param content - complete file text.
  * @returns rules plus the path and content envelope.
  */
 export function buildFilePrompt(relativePath: string, content: string): string {
-  return `${SWEEP_RULES}
-
-File: ${relativePath}
-
-${content}`
+  return buildPrompt(SWEEP_RULES, relativePath, content)
 }

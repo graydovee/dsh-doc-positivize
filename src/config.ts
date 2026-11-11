@@ -55,6 +55,10 @@ export interface Config {
   maxFileBytes: number
   /** Time budget for one run, in milliseconds. */
   timeoutMs: number
+  /** Whether each sweep request is recorded in the plugin's audit trail. */
+  auditEnabled: boolean
+  /** How many completed audit run directories to keep. */
+  auditRuns: number
 }
 
 /**
@@ -91,4 +95,11 @@ export const Config = Schema.object({
     .min(1000)
     .default(180000)
     .description('Time budget for one sweep, in milliseconds; at least 1000.'),
+  auditEnabled: Schema.boolean()
+    .default(true)
+    .description('Record each sweep request and its exact file bytes under the harness home.'),
+  auditRuns: Schema.natural()
+    .min(1)
+    .default(20)
+    .description('How many completed audit run directories to keep; at least 1.'),
 })
