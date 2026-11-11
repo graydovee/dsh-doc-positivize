@@ -1,0 +1,79 @@
+{
+  "name": "dsh-doc-positivize",
+  "version": "0.1.0-alpha.10",
+  "description": "DSH plugin that keeps documentation positive and current: a configurable English guard in the system prompt, plus a /positivize command that rewrites negative or historical phrasing, with a structured result card, per-file undo, and a built-in, editable ignore list.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./client/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README*.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "tsdown",
+    "prepare": "tsdown",
+    "smoke:built": "pnpm build && node scripts/smoke-built.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-commands": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@types/node": "^22.20.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    },
+    "manifestVersion": 1
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "system-prompt",
+    "documentation",
+    "writing",
+    "positive-guidance",
+    "positive-description",
+    "affirmative-writing"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,36 @@
+# dsh-doc-positivize bundle layer: register the plugin as one bundle row.
+#
+# This file is the `dsh.bundle.patch` layer (see package.json#dsh.bundle.patch).
+# Layer semantics: a YAML array of row verbs; `insert` adds plugin rows to the
+# composed config. A row's `id` must be unique within the layer stack; `name`
+# resolves the plugin module through the installed package (package.json#main).
+#
+# The plugin takes no required config: the row mounts the built-in English guard
+# and the `/positivize` command. Override or extend them per deployment by
+# uncommenting `config` and editing the values. A patch layer replaces the whole
+# `config` of a row, so restate every key you want to keep.
+- insert:
+    # `id`: stable row identifier used by later layers to override this row.
+    - id: dsh-doc-positivize
+      # `name`: the module the loader imports; resolves to this package entry.
+      name: dsh-doc-positivize
+      # config:
+      #   # Mount the always-on guard; set false to keep only the command.
+      #   guardEnabled: true
+      #   # Replaces the whole guard section (default: the built-in English text).
+      #   guard: |-
+      #     Write every artefact so it describes the state that ships.
+      #   # Appended after the guard, separated by a blank line.
+      #   extra: |-
+      #     In this repository, name the exact check that proves each step.
+      #   # true registers the guard and the /positivize command; false mounts
+      #   # the guard on its own.
+      #   command: true
+      #   # Names, paths, or globs the sweep skips; omit to inherit the built-in list.
+      #   ignoredPaths:
+      #     - node_modules
+      #     - .git
+      #   # Bound one sweep: candidate files, bytes per file, and time budget.
+      #   maxFiles: 12
+      #   maxFileBytes: 96000
+      #   timeoutMs: 180000
