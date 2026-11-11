@@ -79,13 +79,16 @@ export const Config = Schema.object({
     .default([...DEFAULT_IGNORED_PATHS])
     .volatile()
     .description('File and directory names or globs the /positivize sweep skips.'),
-  maxFiles: Schema.number()
+  maxFiles: Schema.natural()
+    .min(1)
     .default(12)
-    .description('Maximum candidate files swept in one run.'),
-  maxFileBytes: Schema.number()
+    .description('Maximum candidate files swept in one run; at least 1.'),
+  maxFileBytes: Schema.natural()
+    .min(1)
     .default(96000)
-    .description('Maximum bytes of one file sent to the model.'),
-  timeoutMs: Schema.number()
+    .description('Maximum bytes of one file sent to the model; at least 1.'),
+  timeoutMs: Schema.natural()
+    .min(1000)
     .default(180000)
-    .description('Time budget for one sweep, in milliseconds.'),
+    .description('Time budget for one sweep, in milliseconds; at least 1000.'),
 })

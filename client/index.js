@@ -156,7 +156,7 @@ window.__ModuleLoader__.load({
     };
 
     function apply(ctx) {
-      injectStyles();
+      ctx.effect(() => injectStyles(), "doc-positivize: styles");
       ctx.effect(() => ctx.locale.register(SETTINGS_NS, { en, zh }), "doc-positivize: settings locale");
       const t = ctx.locale.bind(SETTINGS_NS);
       const form = ctx.configForms.get(ENTRY_ID);
@@ -825,7 +825,10 @@ window.__ModuleLoader__.load({
         const count = Array.isArray(value.ignoredPaths) ? value.ignoredPaths.length : 0;
         return h("span", null, `${t(value.guardEnabled ? "on" : "off")} · ${count} ${t("ignored")}`);
       }
-      const ready = state && state.status === "ready" && state.writable && state.mode === "host";
+      // The Settings section and the Plugins-page row page both pass a settings
+      // form snapshot ({ status, value, revision, writable }) — there is no `mode`
+      // field, so readiness is status + writable for both surfaces.
+      const ready = Boolean(state && state.status === "ready" && state.writable);
       return h(ConfigEditor, {
         value,
         ready,
@@ -1133,15 +1136,21 @@ body[data-ds-dark-theme] .dp-tile{background:color-mix(in srgb,var(--dsw-static-
 `;
 
     function injectStyles() {
-      if (typeof document === "undefined") return;
+      if (typeof document === "undefined") return () => {};
       let tag = document.querySelector(`style[data-plugin-css="${STYLE_ID}"]`);
-      if (tag === null) {
+      const created = tag === null;
+      if (created) {
         tag = document.createElement("style");
         tag.dataset.plugin = "dsh-doc-positivize";
         tag.dataset.pluginCss = STYLE_ID;
         document.head.appendChild(tag);
       }
       tag.textContent = STYLES;
+      // Own the tag exactly as long as this fiber lives, so disabling the plugin
+      // removes its CSS instead of waiting for a page reload.
+      return () => {
+        if (created) tag.remove();
+      };
     }
 
     exports.apply = apply;
