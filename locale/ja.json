@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Doc positivize",
+    "description": "ドキュメントを前向きかつ最新に保ちます。システムプロンプトの常時ルールと、ファイル単位で取り消せる /positivize スキャンを提供します。"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Doc positivize",
+    "description": "Hält die Dokumentation positiv und aktuell: eine Regel im System-Prompt plus ein /positivize-Durchlauf mit Rückgängig pro Datei."
+  }
+}
