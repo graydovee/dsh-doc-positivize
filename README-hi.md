@@ -128,7 +128,15 @@ node <dsh-plugin-guide>/dist/dsh-plugin-dev.js check --cwd .
 
 ## Verify
 
-`dsh-plugin-dev verify` plugin को pack करके साफ़ अस्थायी `DSH_HOME` में install करता है। `0.2.2-rc.1` पर बिना credentials वाला smoke `TRANSPORT: DeepSeek Messages transport failed` पर रुकता है; install और `--dump-config` पास होते हैं, और boot prompt को `system/message` event के रूप में लिखता है — वहाँ guard खोजें।
+`dsh-plugin-dev verify` plugin को pack करके साफ़ अस्थायी `DSH_HOME` में install करता है। इसके default harness `0.1.5` के लिए हैं, जिन्हें `0.2.2-rc.1` की compatibility जाँच अस्वीकार करती है, इसलिए दोनों package pin करें:
+
+```sh
+node <dsh-plugin-guide>/dist/dsh-plugin-dev.js verify --cwd . \
+  --base @deepseek-ai/dsh-base@0.2.2-rc.1 \
+  --headless @deepseek-ai/dsh-headless@0.2.2-rc.1
+```
+
+इससे `pack`, `install` और `--dump-config` पास होते हैं। बिना credentials वाला smoke `TRANSPORT: DeepSeek Messages transport failed` पर रुकता है; boot prompt को `system/message` event के रूप में लिखता है — वहाँ guard खोजें।
 
 ## Attribution
 

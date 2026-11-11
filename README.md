@@ -141,7 +141,15 @@ node <dsh-plugin-guide>/dist/dsh-plugin-dev.js check --cwd .
 
 ## Verify
 
-`dsh-plugin-dev verify` packs the plugin and installs it into a clean temporary `DSH_HOME`. On harness `0.2.2-rc.1` the headless smoke reaches the model transport, so a credential-free temporary home ends with `TRANSPORT: DeepSeek Messages transport failed` rather than a model answer; the install and `--dump-config` steps still pass, and the boot writes the rendered prompt as a `system/message` event. Grep that event for the guard text to prove the section reached the model-visible prompt.
+`dsh-plugin-dev verify` packs the plugin and installs it into a clean temporary `DSH_HOME`. Its defaults target harness `0.1.5`, which the `0.2.2-rc.1` compatibility gate rejects, so pin both packages:
+
+```sh
+node <dsh-plugin-guide>/dist/dsh-plugin-dev.js verify --cwd . \
+  --base @deepseek-ai/dsh-base@0.2.2-rc.1 \
+  --headless @deepseek-ai/dsh-headless@0.2.2-rc.1
+```
+
+`pack`, `install`, and `--dump-config` then pass. The headless smoke reaches the model transport, so a credential-free temporary home ends with `TRANSPORT: DeepSeek Messages transport failed` rather than a model answer; the boot still writes the rendered prompt as a `system/message` event, and grepping that event for the guard text proves the section reached the model-visible prompt.
 
 ## Attribution
 

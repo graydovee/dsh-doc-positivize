@@ -155,7 +155,15 @@ node <dsh-plugin-guide>/dist/dsh-plugin-dev.js check --cwd .
 
 ## Verify
 
-`dsh-plugin-dev verify` 会打包并装进干净的临时 `DSH_HOME`。在 harness `0.2.2-rc.1` 上，无凭据的临时 home 会在 headless smoke 阶段走到模型传输并报 `TRANSPORT: DeepSeek Messages transport failed`；安装与 `--dump-config` 仍会通过，且启动过程会把渲染后的提示词写成 `system/message` 事件——grep 该事件里的护栏文本即可证明段落进入了模型可见的系统提示词。
+`dsh-plugin-dev verify` 会打包并装进干净的临时 `DSH_HOME`。它的默认值面向 harness `0.1.5`，会被 `0.2.2-rc.1` 的兼容性检查拒绝，因此要同时固定这两个包：
+
+```sh
+node <dsh-plugin-guide>/dist/dsh-plugin-dev.js verify --cwd . \
+  --base @deepseek-ai/dsh-base@0.2.2-rc.1 \
+  --headless @deepseek-ai/dsh-headless@0.2.2-rc.1
+```
+
+这样 `pack`、`install`、`--dump-config` 都会通过。无凭据的临时 home 会在 headless smoke 阶段走到模型传输并报 `TRANSPORT: DeepSeek Messages transport failed`；启动过程仍会把渲染后的提示词写成 `system/message` 事件——grep 该事件里的护栏文本即可证明段落进入了模型可见的系统提示词。
 
 ## Attribution
 

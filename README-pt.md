@@ -128,7 +128,15 @@ node <dsh-plugin-guide>/dist/dsh-plugin-dev.js check --cwd .
 
 ## Verify
 
-`dsh-plugin-dev verify` empacota e instala em um `DSH_HOME` temporário. Em `0.2.2-rc.1` o smoke sem credenciais termina em `TRANSPORT: DeepSeek Messages transport failed`; a instalação e o `--dump-config` passam, e o arranque grava o prompt como evento `system/message`: procure ali a guarda.
+`dsh-plugin-dev verify` empacota e instala em um `DSH_HOME` temporário. Os padrões da ferramenta miram o harness `0.1.5`, que a verificação de compatibilidade do `0.2.2-rc.1` rejeita, então fixe os dois pacotes:
+
+```sh
+node <dsh-plugin-guide>/dist/dsh-plugin-dev.js verify --cwd . \
+  --base @deepseek-ai/dsh-base@0.2.2-rc.1 \
+  --headless @deepseek-ai/dsh-headless@0.2.2-rc.1
+```
+
+Assim `pack`, `install` e `--dump-config` passam. O smoke sem credenciais termina em `TRANSPORT: DeepSeek Messages transport failed`; o arranque grava o prompt como evento `system/message`: procure ali a guarda.
 
 ## Attribution
 
