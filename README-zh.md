@@ -65,18 +65,25 @@
 
 ## Install
 
-本仓库负责构建并打包插件；下面的命令把它安装到 profile 里。
+仓库直接提交了构建产物，因此从 GitHub 安装只需一步，不需要任何构建授权：
+
+```sh
+# 直接从 GitHub 安装，无需 allowBuilds 授权
+dsh plugin --profile <profile> add github:graydovee/dsh-doc-positivize
+
+# 确认 bundle 行已挂载
+dsh --profile <profile> --dump-config | grep dsh-doc-positivize
+```
+
+Web 端「插件 → 添加插件」里粘贴 `github:graydovee/dsh-doc-positivize`（或仓库 URL）也是同样的一次安装。要改源码，或改用离线打包的 tarball：
 
 ```sh
 pnpm install
-pnpm build
+pnpm build          # 重新生成 lib/；改源码时一并提交
 pnpm pack --pack-destination ./.pack
 
 # 本地 spec 必须是绝对路径
 dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
-
-# 确认 bundle 行已挂载
-dsh --profile <profile> --dump-config | grep dsh-doc-positivize
 ```
 
 `dsh plugin add` 成功后还会把该包记入 `dsh.profile.bundles`，下次启动即生效。重启应用（或重载 profile）后启用。

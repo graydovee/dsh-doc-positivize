@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Doc positivize",
+    "description": "Mantém a documentação positiva e atual: uma regra no system prompt e uma varredura /positivize com desfazer por arquivo."
+  }
+}

@@ -13,7 +13,9 @@
     "./client": {
       "default": "./client/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
   },
   "files": [
     "lib",
@@ -21,14 +23,15 @@
     "cordis.patch.yml",
     "README*.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "locale/*.json",
+    "icon.svg"
   ],
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepack": "tsdown",
-    "prepare": "tsdown",
     "smoke:built": "pnpm build && node scripts/smoke-built.mjs"
   },
   "dependencies": {
@@ -75,5 +78,13 @@
     "node": "^22.19.0 || >=24.0.0"
   },
   "packageManager": "pnpm@10.34.6",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/graydovee/dsh-doc-positivize.git"
+  },
+  "homepage": "https://github.com/graydovee/dsh-doc-positivize#readme",
+  "bugs": {
+    "url": "https://github.com/graydovee/dsh-doc-positivize/issues"
+  }
 }

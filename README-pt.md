@@ -60,18 +60,25 @@ O cartão usa três rotas exatas e autenticadas como owner fornecidas por Connec
 
 ## Install
 
-Este repositório constrói e empacota o plugin; os comandos a seguir instalam-no num perfil.
+O repositório inclui os pontos de entrada já construídos, então instalar via Git é um único passo e não exige permissão de build:
+
+```sh
+# instalar direto do GitHub, sem aprovar allowBuilds
+dsh plugin --profile <profile> add github:graydovee/dsh-doc-positivize
+
+# confirme que a linha do bundle é montada
+dsh --profile <profile> --dump-config | grep dsh-doc-positivize
+```
+
+Na página web **Plugins**, cole `github:graydovee/dsh-doc-positivize` (ou a URL do repositório) em **Adicionar plugin** para a mesma instalação. Para trabalhar no código ou instalar um tarball offline:
 
 ```sh
 pnpm install
-pnpm build
+pnpm build          # regenera lib/; faça commit junto com a mudança
 pnpm pack --pack-destination ./.pack
 
 # uma especificação local precisa ser um caminho absoluto
 dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
-
-# confirme que a linha do bundle é montada
-dsh --profile <profile> --dump-config | grep dsh-doc-positivize
 ```
 
 Um `dsh plugin add` bem-sucedido também registra o pacote em `dsh.profile.bundles`; reinicie o aplicativo (ou recarregue o perfil) para ativá-lo.

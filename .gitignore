@@ -1,8 +1,12 @@
 node_modules/
-lib/
+# `lib/` is committed on purpose: a git install fetches sources only, and pnpm
+# refuses a git dependency's `prepare` script until the user allowlists it.
+# Shipping the built entry points keeps `dsh plugin add github:...` a one-step,
+# permission-free install. Run `pnpm build` and commit `lib/` with each change.
 .pnpm-store/
 .pnpm-cache/
 .pack/
 *.tgz
 *.log
 .DS_Store
+.tmp-*/

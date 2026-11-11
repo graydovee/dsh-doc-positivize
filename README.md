@@ -64,18 +64,25 @@ The card uses three exact, owner-authenticated routes supplied by Connection: `G
 
 ## Install
 
-This repository builds and packs the plugin; the commands below install it into a profile.
+The repository commits its built entry points, so a git install is one step and needs no build permission:
+
+```sh
+# install straight from GitHub, without an allowBuilds approval
+dsh plugin --profile <profile> add github:graydovee/dsh-doc-positivize
+
+# confirm that the bundle row mounts
+dsh --profile <profile> --dump-config | grep dsh-doc-positivize
+```
+
+In the Web **Plugins** page, paste `github:graydovee/dsh-doc-positivize` (or the repository URL) into **Add plugin** for the same install. To work on the sources, or to install a packed tarball offline:
 
 ```sh
 pnpm install
-pnpm build
+pnpm build          # regenerates lib/; commit it with the source change
 pnpm pack --pack-destination ./.pack
 
 # a local spec must be an absolute path
 dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
-
-# confirm that the bundle row mounts
-dsh --profile <profile> --dump-config | grep dsh-doc-positivize
 ```
 
 A successful `dsh plugin add` also records the package in `dsh.profile.bundles`, so the row applies on the next boot. Restart the app (or reload the profile) to activate it.

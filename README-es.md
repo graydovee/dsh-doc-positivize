@@ -60,18 +60,25 @@ La tarjeta usa tres rutas exactas y autenticadas como owner que sirve Connection
 
 ## Install
 
-Este repositorio construye y empaqueta el plugin; los comandos siguientes lo instalan en un perfil.
+El repositorio incluye los puntos de entrada ya construidos, así que instalar desde Git es un solo paso y no requiere permiso de compilación:
+
+```sh
+# instalar directamente desde GitHub, sin aprobar allowBuilds
+dsh plugin --profile <profile> add github:graydovee/dsh-doc-positivize
+
+# confirma que la fila del bundle se monta
+dsh --profile <profile> --dump-config | grep dsh-doc-positivize
+```
+
+En la página web **Plugins**, pega `github:graydovee/dsh-doc-positivize` (o la URL del repositorio) en **Añadir plugin** para la misma instalación. Para trabajar sobre las fuentes o instalar un tarball sin conexión:
 
 ```sh
 pnpm install
-pnpm build
+pnpm build          # regenera lib/; commitéalo junto al cambio de fuentes
 pnpm pack --pack-destination ./.pack
 
 # una especificación local debe ser una ruta absoluta
 dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
-
-# confirma que la fila del bundle se monta
-dsh --profile <profile> --dump-config | grep dsh-doc-positivize
 ```
 
 Un `dsh plugin add` correcto también registra el paquete en `dsh.profile.bundles`; reinicia la aplicación (o recarga el perfil) para activarlo.

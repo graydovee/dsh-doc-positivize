@@ -60,18 +60,25 @@ Card Connection की तीन exact, owner-authenticated routes इस्त�
 
 ## Install
 
-यह repository plugin को build और pack करता है; नीचे दिए command इसे profile में install करते हैं।
+repository में build किए हुए entry point commit किए गए हैं, इसलिए Git से install एक ही कदम है और build permission नहीं चाहिए:
+
+```sh
+# सीधे GitHub से install करें, allowBuilds approval के बिना
+dsh plugin --profile <profile> add github:graydovee/dsh-doc-positivize
+
+# पुष्टि करें कि bundle row mount हुआ
+dsh --profile <profile> --dump-config | grep dsh-doc-positivize
+```
+
+Web **Plugins** पेज पर **Add plugin** में `github:graydovee/dsh-doc-positivize` (या repository URL) चिपकाने से वही install होता है। source में बदलाव करने या offline tarball install करने के लिए:
 
 ```sh
 pnpm install
-pnpm build
+pnpm build          # lib/ फिर बनता है; source बदलाव के साथ इसे commit करें
 pnpm pack --pack-destination ./.pack
 
 # स्थानीय spec का पूर्ण पथ होना चाहिए
 dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.10.tgz"
-
-# पुष्टि करें कि bundle row mount हुआ
-dsh --profile <profile> --dump-config | grep dsh-doc-positivize
 ```
 
 सफल `dsh plugin add` package को `dsh.profile.bundles` में भी दर्ज करता है; सक्रिय करने के लिए app restart करें (या profile reload करें)।
