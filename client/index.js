@@ -29,9 +29,9 @@ window.__ModuleLoader__.load({
     const MAX_DIFF_ROWS = 1500;
 
     const en = {
-      name: "Doc Positivize",
-      nav: "Doc Positivize",
-      title: "Doc Positivize",
+      name: "Positivize docs",
+      nav: "Positivize docs",
+      title: "Positivize docs",
       summary: "Doc-positivize guard and ignore list",
       sectionHint: "The settings live in this plugin's profile entry, so the guard and the sweep share one configuration.",
       guard: "Enable the doc-positivize guard",

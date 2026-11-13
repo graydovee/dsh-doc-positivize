@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Doc positivize",
-    "description": "Hält die Dokumentation positiv und aktuell: eine Regel im System-Prompt plus ein /positivize-Durchlauf mit Rückgängig pro Datei."
+    "description": "Formuliert negative und historische Formulierungen in Dokumentation und Code-Kommentaren (nicht verwenden, veraltet, nicht mehr unterstützt) in positive Aussagen zum aktuellen Design um; dazu eine dauerhafte Prompt-Regel und ein umkehrbarer /positivize-Durchlauf."
   }
 }

@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Doc positivize",
-    "description": "Mantiene la documentación en positivo y al día: una regla en el system prompt y un barrido /positivize con deshacer por archivo."
+    "description": "Reescribe las formulaciones negativas e históricas en la documentación y los comentarios de código (no usar, obsoleto, ya no se admite) como afirmaciones positivas del diseño actual; incluye una regla permanente en el prompt y un barrido /positivize reversible."
   }
 }

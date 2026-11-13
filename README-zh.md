@@ -1,6 +1,6 @@
 # dsh-doc-positivize
 
-一个 DeepSeek Harness（DSH）插件，让文档保持正向且只描述当前状态：常驻系统提示词的英文护栏负责每次生成；`/positivize` 命令负责把已有文档、注释、提交文案中的否定式或历史式表达改写为正面描述。
+一个 DeepSeek Harness（DSH）插件，把文档与代码注释里的负向、历史表述（不要、已废弃、不再支持……）改写为正向陈述当前实现的说法：常驻系统提示词护栏在生成时生效，`/positivize` 命令批量改写已有文件，并提供结果卡与逐文件撤销。
 
 ## What it does
 
@@ -83,7 +83,7 @@ pnpm build          # 重新生成 lib/；改源码时一并提交
 pnpm pack --pack-destination ./.pack
 
 # 本地 spec 必须是绝对路径
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.12.tgz"
 ```
 
 `dsh plugin add` 成功后还会把该包记入 `dsh.profile.bundles`，下次启动即生效。重启应用（或重载 profile）后启用。

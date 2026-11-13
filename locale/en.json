@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Doc positivize",
-    "description": "Keeps documentation positive and current: a system-prompt guard plus a /positivize sweep with a result card and per-file undo."
+    "title": "Positivize docs",
+    "description": "Rewrites negative and historical phrasing in docs and code comments (do not, deprecated, no longer) into positive statements of the current design; plus an always-on prompt guard and a reversible /positivize sweep."
   }
 }

@@ -1,6 +1,6 @@
 # dsh-doc-positivize
 
-Um plugin do DeepSeek Harness (DSH) que mantém a documentação positiva e atual: uma guarda permanente em inglês no system prompt e o comando `/positivize`, que reescreve em documentação, comentários e textos de commit as formulações negativas ou históricas como descrições positivas.
+Um plugin do DeepSeek Harness (DSH) que reescreve formulações negativas e históricas na documentação e nos comentários de código —"não use", "obsoleto", "não é mais suportado"— como afirmações positivas do design atual, com uma regra permanente no system prompt e o comando `/positivize`, que varre os arquivos existentes, mostra um cartão de resultado e desfaz arquivo por arquivo.
 
 ## What it does
 
@@ -78,7 +78,7 @@ pnpm build          # regenera lib/; faça commit junto com a mudança
 pnpm pack --pack-destination ./.pack
 
 # uma especificação local precisa ser um caminho absoluto
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.12.tgz"
 ```
 
 Um `dsh plugin add` bem-sucedido também registra o pacote em `dsh.profile.bundles`; reinicie o aplicativo (ou recarregue o perfil) para ativá-lo.

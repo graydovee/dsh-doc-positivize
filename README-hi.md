@@ -1,6 +1,6 @@
 # dsh-doc-positivize
 
-DeepSeek Harness (DSH) के लिए एक plugin जो documentation को सकारात्मक और वर्तमान रखता है: system prompt में एक स्थायी अंग्रेज़ी guard, और `/positivize` command जो documentation, comments और commit text में negative या historical वाक्यांशों को सकारात्मक विवरण में बदलता है।
+DeepSeek Harness (DSH) के लिए एक plugin जो documentation और code comments में negative और historical वाक्यांशों ("do not", "deprecated", "no longer supported") को आज लागू डिज़ाइन के सकारात्मक कथनों में बदलता है, साथ में system prompt का स्थायी guard और `/positivize` command जो मौजूदा files पर चलता है, result card दिखाता है और हर file अलग से undo करता है।
 
 ## What it does
 
@@ -78,7 +78,7 @@ pnpm build          # lib/ फिर बनता है; source बदलाव
 pnpm pack --pack-destination ./.pack
 
 # स्थानीय spec का पूर्ण पथ होना चाहिए
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.12.tgz"
 ```
 
 सफल `dsh plugin add` package को `dsh.profile.bundles` में भी दर्ज करता है; सक्रिय करने के लिए app restart करें (या profile reload करें)।

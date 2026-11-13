@@ -1,6 +1,6 @@
 # dsh-doc-positivize
 
-A DeepSeek Harness (DSH) plugin that keeps documentation positive and current: an always-on English guard in the system prompt, plus a `/positivize` command that rewrites negative or historical phrasing in documentation, comments, and commit text into positive descriptions.
+A DeepSeek Harness (DSH) plugin that rewrites negative and historical phrasing in documentation and code comments — "do not", "deprecated", "no longer supported" — into positive statements of what ships today, with an always-on system-prompt guard and a `/positivize` command that sweeps existing files, shows a result card, and undoes per file.
 
 ## What it does
 
@@ -82,7 +82,7 @@ pnpm build          # regenerates lib/; commit it with the source change
 pnpm pack --pack-destination ./.pack
 
 # a local spec must be an absolute path
-dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.11.tgz"
+dsh plugin --profile <profile> add "$PWD/.pack/dsh-doc-positivize-0.1.0-alpha.12.tgz"
 ```
 
 A successful `dsh plugin add` also records the package in `dsh.profile.bundles`, so the row applies on the next boot. Restart the app (or reload the profile) to activate it.

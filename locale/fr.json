@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Doc positivize",
-    "description": "Garde la documentation positive et à jour : une règle dans le prompt système et un balayage /positivize avec annulation par fichier."
+    "description": "Réécrit les formulations négatives et historiques dans la documentation et les commentaires de code (ne pas, obsolète, plus pris en charge) en affirmations positives sur la conception actuelle ; avec une règle permanente dans le prompt et un balayage /positivize réversible."
   }
 }

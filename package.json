@@ -1,7 +1,7 @@
 {
   "name": "dsh-doc-positivize",
-  "version": "0.1.0-alpha.11",
-  "description": "DSH plugin that keeps documentation positive and current: a configurable English guard in the system prompt, plus a /positivize command that rewrites negative or historical phrasing, with a structured result card, per-file undo, and a built-in, editable ignore list.",
+  "version": "0.1.0-alpha.12",
+  "description": "DSH plugin that rewrites negative and historical phrasing in docs and code comments into positive statements of the current design, with an always-on system-prompt guard and a /positivize sweep (result card, per-file undo, editable ignore list).",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
